@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo Lotería de Mentiras</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 600px;
+            width: 100%;
+            padding: 20px;
+        }
+        
+        .bingo-card {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 2px;
+            border: 4px solid #000;
+            background-color: #000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .bingo-cell {
+            background-color: white;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 8px;
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+            font-weight: bold;
+        }
+        
+        .center-cell {
+            background-color: #ff0000;
+            color: #000;
+            font-weight: bold;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="bingo-card" class="bingo-card"></div>
+        <div class="controls">
+            <button id="generate-btn">Generar Nueva Tarjeta</button>
+            <button id="save-btn">Guardar como Imagen</button>
+        </div>
+    </div>
+
+    <script>
+        // Array para almacenar los datos del bingo
+        let bingoData = [];
+
+        // Función para mezclar un array (algoritmo Fisher-Yates)
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+        
+        // Función para generar la tarjeta de bingo
+        function generateBingoCard() {
+            const bingoCard = document.getElementById('bingo-card');
+            bingoCard.innerHTML = '';
+            
+            // Mezclar aleatoriamente los datos
+            const shuffledData = shuffleArray(bingoData);
+            
+            // Construir la tarjeta
+            for (let i = 0; i < 25; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('bingo-cell');
+                
+                // Celda central (índice 12)
+                if (i === 12) {
+                    cell.classList.add('center-cell');
+                    cell.innerHTML = "Bingo<br/>Cabaret voltaire";
+                } else {
+                    // Ajustamos el índice: para celdas después del centro, saltamos ese índice
+                    const dataIndex = i >= 12 ? i - 1 : i;
+                    // Solo usamos las primeras 24 celdas del array mezclado (excluyendo el centro)
+                    if (dataIndex < shuffledData.length) {
+                        cell.textContent = shuffledData[dataIndex];
+                    } else {
+                        cell.textContent = "Celda " + (dataIndex + 1);
+                    }
+                }
+                
+                bingoCard.appendChild(cell);
+            }
+        }
+
+        // Función para guardar la tarjeta como imagen
+        function saveAsImage() {
+            const bingoCard = document.getElementById('bingo-card');
+            
+            // Crear un canvas del tamaño de la tarjeta
+            html2canvas(bingoCard, {
+                backgroundColor: null,
+                scale: 2 // Mejor calidad
+            }).then(canvas => {
+                // Crear un enlace para descargar la imagen
+                const link = document.createElement('a');
+                link.download = 'bingo-loteria.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // Cargar librería html2canvas para exportar a imagen
+        function loadHtml2Canvas() {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            document.head.appendChild(script);
+        }
+
+        // Función para cargar datos desde un archivo JSON externo
+        function loadExternalJson() {
+            fetch('datos-bingo.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Error HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    bingoData = data.items;
+                    console.log("Datos JSON cargados correctamente:", bingoData.length, "elementos");
+                    generateBingoCard(); // Generar la tarjeta después de cargar los datos
+                })
+                .catch(error => {
+                    console.error('Error cargando los datos JSON:', error);
+                    // Cargar datos de respaldo en caso de error
+                    loadBackupData();
+                });
+        }
+        
+        // Datos de respaldo en caso de que falle la carga del archivo JSON
+        function loadBackupData() {
+            console.log("Cargando datos de respaldo");
+            bingoData = [
+                "Error al cargar", "Intenta de nuevo", "Verifica conexión", 
+                "JSON no disponible", "Error de fetch",
+                "Archivo no encontrado", "Error de red", "Refresca la página", 
+                "Revisa la URL", "404 Not Found",
+                "Datos no cargados", "Verifica JSON", "", 
+                "Prueba más tarde", "Verifica permisos",
+                "Error de sintaxis", "JSON inválido", "Internet desconectado", 
+                "Respuesta vacía", "Verifica CORS",
+                "Timeout excedido", "Reinicia el sitio", "URL incorrecta", 
+                "Revisa la consola", "Contacta al administrador"
+            ];
+            generateBingoCard();
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadHtml2Canvas();
+            loadExternalJson();  // Cargar datos JSON externo
+            
+            document.getElementById('generate-btn').addEventListener('click', generateBingoCard);
+            document.getElementById('save-btn').addEventListener('click', saveAsImage);
+        });
+    </script>
+</body>
+</html>
